@@ -336,7 +336,7 @@ package:
   size: 11519
   timestamp: 1687772319931
 - name: bambi
-  version: 0.12.0
+  version: 0.13.0
   manager: conda
   platform: osx-arm64
   dependencies:
@@ -350,10 +350,10 @@ package:
     python-graphviz: '*'
     scipy: '>=1.7.0'
     setuptools: '>47.1.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/bambi-0.12.0-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/bambi-0.13.0-pyhd8ed1ab_0.conda
   hash:
-    md5: ba56c060ef1c3b3931631fa3f551a857
-    sha256: 8b3d6fc04f2bc66cd47152cf54a267e3ee3d190dee195e5b3d8b0530bb1171c6
+    md5: cd1aa5ed6bc3a95bfdca43786d6ebae0
+    sha256: 368e5dd66961f2399adea03f25a176bfb3458510105a8b7a30ceaa7c1cd685a6
   optional: false
   category: main
   build: pyhd8ed1ab_0
@@ -363,8 +363,8 @@ package:
   license: MIT
   license_family: MIT
   noarch: python
-  size: 65826
-  timestamp: 1688329621313
+  size: 77406
+  timestamp: 1698426913536
 - name: beautifulsoup4
   version: 4.12.2
   manager: conda
@@ -721,7 +721,7 @@ package:
   size: 998078
   timestamp: 1692961080870
 - name: causalpy
-  version: 0.1.1
+  version: 0.1.2
   manager: conda
   platform: osx-arm64
   dependencies:
@@ -739,10 +739,10 @@ package:
     seaborn: '>=0.11.2'
     statsmodels: '*'
     xarray: '>=v2022.11.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/causalpy-0.1.1-pyhd8ed1ab_0.conda
+  url: https://conda.anaconda.org/conda-forge/noarch/causalpy-0.1.2-pyhd8ed1ab_0.conda
   hash:
-    md5: 0faa36034b4bca405dfedf795ecad2ee
-    sha256: ade96590ddc864ee4edf34ae08496f5faf32ce4384851d25193c57e18110e74d
+    md5: d04511c79ff496ed674d21dfc97475bc
+    sha256: db346ef6ca2bd45490a5077a1f728e6ca6d32b15ce36d38d4817dac86f87e10f
   optional: false
   category: main
   build: pyhd8ed1ab_0
@@ -752,8 +752,8 @@ package:
   license: Apache-2.0
   license_family: APACHE
   noarch: python
-  size: 86847
-  timestamp: 1695152896450
+  size: 87901
+  timestamp: 1697555234765
 - name: cctools_osx-arm64
   version: 973.0.1
   manager: conda
