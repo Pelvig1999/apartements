@@ -13,8 +13,10 @@ httpx = "^0.25.1"
 scikit-learn = "^1.3.2"
 hiplot = "^0.1.33"
 plotly = "^5.18.0"
-flaml = {extras = ["automl"], version = "^2.1.1"}
-autogluon = {extras = ["catboost", "lightgbm", "xgboost"], version = "^0.8.2"}
+flaml = { extras = ["automl"], version = "^2.1.1" }
+# autogluon = { extras = ["catboost", "lightgbm", "xgboost"], version = "^0.8.2" }
+mljar-supervised = "^1.1.1"
+deepchecks = "^0.17.5"
 bokeh = "^3.3.0"
 
 
@@ -29,7 +31,7 @@ pickleshare = "^0.7.5"
 
 [tool.poetry.group.lab.dependencies]
 ipykernel = "^6.26.0"
-ipywidgets = "^8.1.1"
+ipywidgets = ">=7.6.5,<8"
 nbformat = "^5.9.2"
 
 [build-system]
