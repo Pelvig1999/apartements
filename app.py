@@ -9,7 +9,7 @@ import arviz as az
 def hash_arviz_dataset(dataset):
     return None
 # Function to load the model trace
-@st.cache(hash_funcs={az.InferenceData: hash_arviz_dataset})
+@st.cache_data(hash_funcs={az.InferenceData: hash_arviz_dataset})
 def load_trace():
     with pm.Model() as modelx:
         sigma = pm.HalfCauchy("sigma", beta=10)
@@ -53,23 +53,28 @@ def predict_price_bayesian(size, rooms, trace):
 # Streamlit app interface
 def main():
     st.title("Apartment Sales Price Predictor")
-    # ... (rest of your Streamlit app code for input and visualization) ...
 
-    if submit_button:
+    # User input for apartment specifications
+    with st.form(key='apartment_form'):
+        size = st.text_input("Size of the apartment (in square meters):")
+        rooms = st.number_input("Number of rooms:", min_value=1, max_value=10, step=1)
+        submit_button = st.form_submit_button(label='Submit')
+
+    if submit_button and size.isnumeric():
         size = float(size)
         rooms = int(rooms)
-        predicted_price = predict_price_bayesian(size, rooms, trace)
+        ppd_dv = predict_price_bayesian(size, rooms, trace)
+
         # Visualization
         M = 1e6
         predictions = 10**(ppd_dv.predictions)
         price_predictions = predictions["price"]
         _, ax = plt.subplots(figsize=(9, 5))
-        
-        # The following code assumes you have a specific 'obs_idx' and 'actual_price' to compare against
-        obs_idx = 13  # You might want to make this dynamic based on user input
-        actual_price = 3000000  # Example actual price, replace with user input if needed
 
-        for k, threshold in enumerate(np.array([1, 3, 5, 7, actual_price/M])*M):
+        # Assuming each prediction corresponds to an apartment
+        obs_idx = 0  # For example, the first prediction
+
+        for k, threshold in enumerate(np.array([1, 3, 5, 7, 9])*M):  # Example thresholds
             probs_above_threshold = (price_predictions.sel(obs_idx=obs_idx) >= threshold).mean(dim=("chain", "draw"))
 
             ax.axvline(threshold, color=f"C{k}")
@@ -90,9 +95,9 @@ def main():
                 fontsize="16",
                 fontweight="bold",
             )
-        ax.set_title(f"Apartment {obs_idx}\nProbability to price more than thresholds ({actual_price})", fontsize=16)
+        ax.set_title(f"Apartment {obs_idx}\nProbability to price more than thresholds", fontsize=16)
         ax.set(xlabel="Price", ylabel="Plausible values")
-        st.pyplot(fig)
+        st.pyplot(ax.figure)
 
 # Run the app
 if __name__ == "__main__":
