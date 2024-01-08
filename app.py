@@ -5,8 +5,11 @@ import pandas as pd
 import pymc as pm
 import arviz as az
 
+# Custom hash function for xarray.Dataset
+def hash_arviz_dataset(dataset):
+    return None
 # Function to load the model trace
-@st.cache
+@st.cache(hash_funcs={az.InferenceData: hash_arviz_dataset})
 def load_trace():
     with pm.Model() as modelx:
         sigma = pm.HalfCauchy("sigma", beta=10)
