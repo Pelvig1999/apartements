@@ -21,7 +21,7 @@ def load_trace():
 
         likelihood = pm.Normal("price", mu=intercept + Size * size + Rooms * rooms, sigma=sigma, observed=log_price, dims="obs_idx")
 
-    return az.from_netcdf('path/to/modelx_trace.nc')
+    return az.from_netcdf('modelx_trace.nc')
 
 trace = load_trace()
 
