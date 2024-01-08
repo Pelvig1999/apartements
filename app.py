@@ -1,89 +1,96 @@
-# Import necessary libraries
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import random
+import pymc as pm
+import arviz as az
 
-# Mock predictive model function
-def predict_price(rooms, size, latitude, longitude, build_year):
-    # For demonstration purposes, we'll use a simple formula to 'predict' price
-    # In reality, this should be replaced with calls to a trained model
-    base_price = 300000  # base price in a currency of your choice
-    price_per_room = 50000
-    price_per_sqm = 3000
-    age_factor = 0.99  # Depreciation factor per year
-
-    # Calculate years since built
-    years_since_built = pd.Timestamp.now().year - build_year.year
-
-    # Generate a random factor to simulate prediction variability
-    random_factor = random.uniform(0.9, 1.1)
-
-    # Calculate the predicted price
-    predicted_price = (base_price + 
-                       (price_per_room * rooms) + 
-                       (price_per_sqm * float(size)) * 
-                       (age_factor ** years_since_built) * 
-                       random_factor)
-    
-    return predicted_price
-
-
-# Streamlit app
-def main():
-    st.title("Apartment Sales Price Predictor for the Copenhagen and Frederiksberg Municipality")
-    st.markdown("""
-        ## This webpage can help you get a more transparent insight into how you should price your apartment in correspondence to the market right now in Copenhagen.
-        What you need to do is to input your apartment specifications below, and we will give you a rough estimation of how much you can get from selling your apartment right now.
-    """)
-
-    # User input for apartment specifications
-    with st.form(key='apartment_form'):
-        # Numeric input for the number of rooms
-        rooms = st.number_input("How many rooms does your apartment have?", min_value=1, max_value=5, value=1, step=1)
+# Function to load the model trace
+@st.cache
+def load_trace():
+    with pm.Model() as modelx:
+        sigma = pm.HalfCauchy("sigma", beta=10)
+        intercept = pm.HalfNormal("Intercept", sigma=20)
+        Size = pm.Normal("Size", 0, sigma=20)
+        Rooms = pm.Normal("Rooms", 0, sigma=10)
         
-        # Text input for the size of the apartment
-        size = st.text_input("How large is your apartment (in square meters)?")
+        # Dummy data, replaced later by actual user input
+        size = pm.MutableData('size', np.log10([50]), dims="obs_idx")
+        rooms = pm.MutableData('rooms', [2], dims="obs_idx")
+        log_price = np.log10([300000])
 
-        # Text inputs for the latitude and longitude
-        latitude = st.text_input("Latitude of your apartment:")
-        longitude = st.text_input("Longitude of your apartment:")
+        likelihood = pm.Normal("price", mu=intercept + Size * size + Rooms * rooms, sigma=sigma, observed=log_price, dims="obs_idx")
 
-        # Date input for the build year
-        build_year = st.date_input("When was the building your apartment is located in built?")
+    return az.from_netcdf('path/to/modelx_trace.nc')
 
-        # Form submission button
-        submit_button = st.form_submit_button(label='Submit')
+trace = load_trace()
 
-    if submit_button and size.isnumeric():
-        # Convert inputs and call the model
+# Predictive function
+def predict_price_bayesian(size, rooms, trace):
+    with pm.Model() as modelx:
+        sigma = pm.HalfCauchy("sigma", beta=10)
+        intercept = pm.HalfNormal("Intercept", sigma=20)
+        Size = pm.Normal("Size", 0, sigma=20)
+        Rooms = pm.Normal("Rooms", 0, sigma=10)
+        
+        size = pm.MutableData('size', np.log10([size]), dims="obs_idx")
+        rooms = pm.MutableData('rooms', [rooms], dims="obs_idx")
+
+        likelihood = pm.Normal("price", mu=intercept + Size * size + Rooms * rooms, sigma=sigma)
+
+        # Set new data for prediction
+        pm.set_data({'size': np.log10([size]), 'rooms': [rooms]})
+        
+        # Generate posterior predictive samples
+        ppd_dv = pm.sample_posterior_predictive(trace, predictions=True, extend_inferencedata=True)
+
+    pred_price = (10**ppd_dv.predictions["price"]).mean(dim=["chain", "draw"]).data.round(0)
+    return pred_price
+
+# Streamlit app interface
+def main():
+    st.title("Apartment Sales Price Predictor")
+    # ... (rest of your Streamlit app code for input and visualization) ...
+
+    if submit_button:
         size = float(size)
-        latitude = float(latitude)
-        longitude = float(longitude)
-        predicted_price = predict_price(rooms, size, latitude, longitude, build_year)
+        rooms = int(rooms)
+        predicted_price = predict_price_bayesian(size, rooms, trace)
+        # Visualization
+        M = 1e6
+        predictions = 10**(ppd_dv.predictions)
+        price_predictions = predictions["price"]
+        _, ax = plt.subplots(figsize=(9, 5))
+        
+        # The following code assumes you have a specific 'obs_idx' and 'actual_price' to compare against
+        obs_idx = 13  # You might want to make this dynamic based on user input
+        actual_price = 3000000  # Example actual price, replace with user input if needed
 
-        # Display the predicted price
-        st.write(f"The predicted price of your apartment is: DKK{predicted_price:,.2f}")
+        for k, threshold in enumerate(np.array([1, 3, 5, 7, actual_price/M])*M):
+            probs_above_threshold = (price_predictions.sel(obs_idx=obs_idx) >= threshold).mean(dim=("chain", "draw"))
 
-        # Visualization (simple line plot with the predicted price)
-        fig, ax = plt.subplots()
-        ax.plot([0, 1], [0, predicted_price], 'o-')
-        ax.set_title("Price Prediction Visualization")
-        ax.set_ylabel("Price")
-        ax.set_xticks([])
-        ax.set_yticklabels(['', f'DKK{predicted_price:,.2f}'])
+            ax.axvline(threshold, color=f"C{k}")
+            _, pdf = az.kde(price_predictions.sel(obs_idx=obs_idx).stack(sample=("chain", "draw")).data)
+            ax.text(
+                x=threshold - 35,
+                y=pdf.max() / 2,
+                s=f">={threshold/M:.0f}M",
+                color=f"C{k}",
+                fontsize="16",
+                fontweight="bold",
+            )
+            ax.text(
+                x=threshold - 20,
+                y=pdf.max() / 2.3,
+                s=f"{probs_above_threshold.data:.0%}",
+                color=f"C{k}",
+                fontsize="16",
+                fontweight="bold",
+            )
+        ax.set_title(f"Apartment {obs_idx}\nProbability to price more than thresholds ({actual_price})", fontsize=16)
+        ax.set(xlabel="Price", ylabel="Plausible values")
         st.pyplot(fig)
-        # Disclaimer text under the visualization
-        st.markdown("""
-            ---
-            **Disclaimer**: This price prediction is an *estimation*. We cannot guarantee that this is what your apartment will sell for. This is only an extra tool in your toolbox when you make the decision of selling. It gives you a more transparent look into how a real estate agent values your apartment and when they ask you how much you want from the sale, you have an indicator on what to answer. 
 
-            Additionally, this visualization also gives you an indication of the possibility, in percentage, of your apartment price. Again, this is only an *estimation*, we cannot guarantee the selling price of your apartment.
-            """)
-
-    elif submit_button:
-        st.error("Please make sure the size is a number.")
-
+# Run the app
 if __name__ == "__main__":
     main()
